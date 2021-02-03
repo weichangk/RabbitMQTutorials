@@ -31,7 +31,7 @@ namespace Send
                                      arguments: null);
 
                 //将交换器与队列通过路由键绑定
-                channel.QueueBind(QUEUE_NAME, EXCHANGE_NAME, ROUTING_KEY);
+                channel.QueueBind(QUEUE_NAME, EXCHANGE_NAME, ROUTING_KEY);//ROUTING_KEY（绑定键BindingKey）
 
                 //发送一条持久化的消息: hello world!
                 string message = "Hello World!";
@@ -39,7 +39,7 @@ namespace Send
 
                 //发送消息
                 channel.BasicPublish(exchange: EXCHANGE_NAME,
-                                     routingKey: ROUTING_KEY,
+                                     routingKey: ROUTING_KEY,//ROUTING_KEY（路由键RoutingKey）
                                      basicProperties: null,//???
                                      body: body);
                 Console.WriteLine(" [x] Sent {0}", message);
