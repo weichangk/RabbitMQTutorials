@@ -30,9 +30,12 @@ namespace RabbitProducer
                 // 发送一条持久化的消息: hello world !
                 String message = "Hello World !";
                 // 消息发布，这个地方的ROUTING_KEY是routing key，当binding key和routing key匹配时，队列才会收到
-                channel.BasicPublish(EXCHANGE_NAME, ROUTING_KEY,
-                        channel.CreateBasicProperties().Persistent = true,//投递模式 delvery mode 为2 ，即消息会被持久化(即存入磁盘)在服务器中。
-                        body: System.Text.Encoding.UTF8.GetBytes(message));
+                var basicProperties = channel.CreateBasicProperties();
+                basicProperties.Persistent = true;//投递模式 delvery mode 为2 ，即消息会被持久化(即存入磁盘)在服务器中。
+                channel.BasicPublish(exchange:EXCHANGE_NAME, 
+                                     routingKey:ROUTING_KEY,
+                                     basicProperties: basicProperties,
+                                     body: System.Text.Encoding.UTF8.GetBytes(message));
                 Console.WriteLine(" [x] Sent {0}", message);
             }
 
