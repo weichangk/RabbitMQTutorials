@@ -33,7 +33,7 @@ namespace RabbitProducerDLXFanout
                 //绑定正常队列
                 channel.QueueBind("queue.normal.fanout", "exchange.normal.fanout", "");//type="fanout"无视BindingKey
 
-                // 声明正常队列；持久化、非排他的、非自动删除
+                // 声明死信队列；持久化、非排他的、非自动删除
                 channel.QueueDeclare("queue.dlx", true, false, false, null);
                 //绑定死信队列
                 channel.QueueBind("queue.dlx", "exchange.dlx", "routingkey.dlx.direct");
