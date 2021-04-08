@@ -10,58 +10,67 @@ namespace RpcClient
     {
         static void Main(string[] args)
         {
-            var rpcClient = new RPCClient();
+            var rpcClient = new RpcClient();
 
             Console.WriteLine(" [x] Requesting fib(30)");
             var response = rpcClient.Call("30");
+
             Console.WriteLine(" [.] Got '{0}'", response);
-
             rpcClient.Close();
-
-            Console.WriteLine(" Press [enter] to exit.");
-            Console.ReadLine();
         }
+
     }
 
 
-    class RPCClient
+    public class RpcClient
     {
-        private IConnection connection;
-        private IModel channel;
-        private string replyQueueName;
-        private EventingBasicConsumer consumer;
+        private readonly IConnection connection;
+        private readonly IModel channel;
+        private readonly string replyQueueName;
+        private readonly EventingBasicConsumer consumer;
+        private readonly BlockingCollection<string> respQueue = new BlockingCollection<string>();
+        private readonly IBasicProperties props;
 
-        public RPCClient()
+        public RpcClient()
         {
             var factory = new ConnectionFactory() { HostName = "localhost" };
+
             connection = factory.CreateConnection();
             channel = connection.CreateModel();
-            replyQueueName = channel.QueueDeclare();
+            replyQueueName = channel.QueueDeclare().QueueName;
             consumer = new EventingBasicConsumer(channel);
-            channel.BasicConsume(replyQueueName, true, consumer);
-        }
 
-        public string Call(string message)
-        {
-            string response = string.Empty;
-            var corrId = Guid.NewGuid().ToString();
-            var props = channel.CreateBasicProperties();
+            props = channel.CreateBasicProperties();
+            var correlationId = Guid.NewGuid().ToString();
+            props.CorrelationId = correlationId;
             props.ReplyTo = replyQueueName;
-            props.CorrelationId = corrId;
-
-            var messageBytes = Encoding.UTF8.GetBytes(message);
-            channel.BasicPublish("", "rpc_queue", props, messageBytes);
-
 
             consumer.Received += (model, ea) =>
             {
                 var body = ea.Body.ToArray();
-                if (ea.BasicProperties.CorrelationId == corrId)
+                var response = Encoding.UTF8.GetString(body);
+                if (ea.BasicProperties.CorrelationId == correlationId)
                 {
-                    response = Encoding.UTF8.GetString(ea.Body.ToArray());
+                    respQueue.Add(response);
                 }
             };
-            return response;
+        }
+
+        public string Call(string message)
+        {
+            var messageBytes = Encoding.UTF8.GetBytes(message);
+            channel.BasicPublish(
+                exchange: "",
+                routingKey: "rpc_queue",
+                basicProperties: props,
+                body: messageBytes);
+
+            channel.BasicConsume(
+                consumer: consumer,
+                queue: replyQueueName,
+                autoAck: true);
+
+            return respQueue.Take();
         }
 
         public void Close()
@@ -69,6 +78,5 @@ namespace RpcClient
             connection.Close();
         }
     }
-
 
 }
